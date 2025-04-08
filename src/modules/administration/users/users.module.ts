@@ -15,8 +15,19 @@ import {UserRepositoryImpl} from '../../../infrastructure/repositories/mongodb/a
 
 // Use Cases
 import {CreateUserUseCase} from '../../../application/use-cases/administration/users/create-user.use-case';
-import { UserMapper } from 'src/application/mappers/administration/user-mapper';
-import { GetUserUseCase } from 'src/application/use-cases/administration/users/get-user-use-case';
+import {UserMapper} from 'src/application/mappers/administration/user-mapper';
+import {GetUserUseCase} from 'src/application/use-cases/administration/users/get-user-use-case';
+import {UpdateUserUseCase} from 'src/application/use-cases/administration/users/update-user-use-case';
+import {DeleteUserUseCase} from 'src/application/use-cases/administration/users/delete-user-use-case';
+import {ListUsersUseCase} from 'src/application/use-cases/administration/users/list-users-use-case';
+import {UpdateUserRolesUseCase} from 'src/application/use-cases/administration/users/update-user-roles-use-case';
+import {ToggleUserStatusUseCase} from 'src/application/use-cases/administration/users/toggle-user-status-use-case';
+import {ChangePasswordUseCase} from 'src/application/use-cases/administration/users/change-password-use-case';
+import {ResetPasswordUseCase} from 'src/application/use-cases/administration/users/reset-password-use-case';
+import {RecordUserLoginUseCase} from 'src/application/use-cases/administration/users/record-user-login-use-case';
+import {GetUserPermissionsUseCase} from 'src/application/use-cases/administration/users/get-user-permissions-use-case';
+import {VerifyUserPermissionUseCase} from 'src/application/use-cases/administration/users/verify-user-permission-use-case';
+import {VerifyUserRoleUseCase} from 'src/application/use-cases/administration/users/verify-user-role-use-case';
 
 @Module({
 	imports: [MongooseModule.forFeature([{name: 'User', schema: UserSchema}])],
@@ -34,10 +45,30 @@ import { GetUserUseCase } from 'src/application/use-cases/administration/users/g
 		// Casos de uso
 		CreateUserUseCase,
 		GetUserUseCase,
-		GetUsersUseCase,
 		UpdateUserUseCase,
 		DeleteUserUseCase,
+		ListUsersUseCase,
+		UpdateUserRolesUseCase,
+		ToggleUserStatusUseCase,
+		ChangePasswordUseCase,
+		ResetPasswordUseCase,
+		RecordUserLoginUseCase,
+		GetUserPermissionsUseCase,
+		VerifyUserPermissionUseCase,
+		VerifyUserRoleUseCase,
 	],
-	exports: [UserRepository, CreateUserUseCase, GetUserUseCase, GetUsersUseCase, UpdateUserUseCase, DeleteUserUseCase],
+	exports: [
+		UserRepository,
+		CreateUserUseCase,
+		GetUserUseCase,
+		UpdateUserUseCase,
+		DeleteUserUseCase,
+		ListUsersUseCase,
+		UpdateUserRolesUseCase,
+		ToggleUserStatusUseCase,
+		ChangePasswordUseCase,
+		ResetPasswordUseCase,
+		RecordUserLoginUseCase,
+	],
 })
 export class UsersModule {}

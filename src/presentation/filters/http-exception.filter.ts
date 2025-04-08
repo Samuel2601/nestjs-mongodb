@@ -1,7 +1,18 @@
 import {ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger} from '@nestjs/common';
 import {Request, Response} from 'express';
 import * as mongoose from 'mongoose';
-import { BusinessException } from 'src/common/exceptions/business-exception';
+import {BusinessException} from 'src/common/exceptions/business-exception';
+
+// Primero, necesitamos definir ValidationException
+export class ValidationException extends Error {
+	constructor(
+		public readonly message: string,
+		public readonly errors: any = null,
+	) {
+		super(message);
+		this.name = 'ValidationException';
+	}
+}
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {

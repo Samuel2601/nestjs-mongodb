@@ -175,6 +175,8 @@ src/
 │   │   │   │   ├── base.repository.ts  # Repositorio base con operaciones comunes
 │   │   └── ...
 │   ├── services/                     # Implementaciones de servicios
+│   │   ├── config/
+│   │   │   ├── config.service.ts
 │   │   ├── auth/
 │   │   │   ├── strategies/
 │   │   │   │   ├── jwt.strategy.ts

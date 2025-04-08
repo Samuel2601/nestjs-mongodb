@@ -5,4 +5,5 @@ import { SetMetadata } from '@nestjs/common';
  * @param roles Roles permitidos
  * @returns Decorador SetMetadata
  */
+export const ROLES_KEY = 'roles';
 export const Roles = (...roles: string[]) => SetMetadata('roles', roles.map(role => role.toLowerCase()));

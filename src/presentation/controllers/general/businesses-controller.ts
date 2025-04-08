@@ -1,264 +1,233 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  Query, 
-  UseGuards, 
-  HttpStatus,
-  HttpCode,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+// Importaciones de NestJS Core
+import {Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Query, Patch, HttpCode, HttpStatus} from '@nestjs/common';
 
-import { JwtAuthGuard } from '../../guards/auth/jwt-auth.guard';
-import { RolesGuard } from '../../guards/roles.guard';
-import { Roles } from '../../decorators/roles.decorator';
+// Importaciones de Swagger
+import {ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam} from '@nestjs/swagger';
 
-import { CreateBusinessDto } from '../../../application/dtos/general/business/create-business.dto';
-import { UpdateBusinessDto } from '../../../application/dtos/general/business/update-business.dto';
-import { BusinessResponseDto } from '../../../application/dtos/general/business/business-response.dto';
-import { PaginatedResponseDto } from '../../../application/dtos/paginated-response.dto';
+// Guards
+import {JwtAuthGuard} from 'src/presentation/guards/auth/jwt-auth.guard';
+import {RolesGuard} from 'src/presentation/guards/roles.guard';
+import {PermissionsGuard} from 'src/presentation/guards/permissions.guard';
 
-import { CreateBusinessUseCase } from '../../../application/use-cases/general/businesses/create-business.use-case';
-import { GetBusinessUseCase } from '../../../application/use-cases/general/businesses/get-business.use-case';
-import { GetBusinessesUseCase } from '../../../application/use-cases/general/businesses/get-businesses.use-case';
-import { UpdateBusinessUseCase } from '../../../application/use-cases/general/businesses/update-business.use-case';
-import { DeleteBusinessUseCase } from '../../../application/use-cases/general/businesses/delete-business.use-case';
-import { FindBusinessByTaxIdUseCase } from '../../../application/use-cases/general/businesses/find-business-by-tax-id.use-case';
-import { FindBusinessesByIndustryUseCase } from '../../../application/use-cases/general/businesses/find-businesses-by-industry.use-case';
-import { FindBusinessesByContactPersonUseCase } from '../../../application/use-cases/general/businesses/find-businesses-by-contact-person.use-case';
+// Decoradores
+import {Roles} from 'src/presentation/decorators/roles-decorator';
+import {Permissions} from 'src/presentation/decorators/permissions-decorator';
+import {Public} from 'src/presentation/decorators/public.decorator';
+
+// DTOs
+import {CreateBusinessDto} from 'src/application/dtos/general/business/create-business-dto';
+import {UpdateBusinessDto} from 'src/application/dtos/general/business/update-business-dto';
+import {BusinessResponseDto} from 'src/application/dtos/general/business/business-response-dto';
+import {PaginatedResponseDto} from 'src/application/dtos/paginated-response-dto';
+
+// Use Cases de Negocios
+import {CreateBusinessUseCase} from 'src/application/use-cases/general/businesses/create-business-use-case';
+import {GetBusinessUseCase} from 'src/application/use-cases/general/businesses/get-business-use-case';
+import {GetBusinessesUseCase} from 'src/application/use-cases/general/businesses/get-businesses-use-case';
+import {UpdateBusinessUseCase} from 'src/application/use-cases/general/businesses/update-business-use-case';
+import {DeleteBusinessUseCase} from 'src/application/use-cases/general/businesses/delete-business-use-case';
+import {FindBusinessByTaxIdUseCase} from 'src/application/use-cases/general/businesses/find-business-by-tax-id-use-case';
+import {FindBusinessByIndustryUseCase} from 'src/application/use-cases/general/businesses/find-business-by-industry-use-case';
+import {FindBusinessByContactPersonUseCase} from 'src/application/use-cases/general/businesses/find-business-by-contact-person-use-case';
+import {FindBusinessByNameUseCase} from 'src/application/use-cases/general/businesses/find-business-by-name-use-case';
+import {FindBusinessByTypeUseCase} from 'src/application/use-cases/general/businesses/find-business-by-type-use-case';
+import {SetBusinessActiveStatusUseCase} from 'src/application/use-cases/general/businesses/set-business-active-status-use-case';
 
 @ApiTags('Businesses')
-@Controller('businesses')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
+@Controller('businesses')
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class BusinessesController {
-  constructor(
-    private readonly createBusinessUseCase: CreateBusinessUseCase,
-    private readonly getBusinessUseCase: GetBusinessUseCase,
-    private readonly getBusinessesUseCase: GetBusinessesUseCase,
-    private readonly updateBusinessUseCase: UpdateBusinessUseCase,
-    private readonly deleteBusinessUseCase: DeleteBusinessUseCase,
-    private readonly findBusinessByTaxIdUseCase: FindBusinessByTaxIdUseCase,
-    private readonly findBusinessesByIndustryUseCase: FindBusinessesByIndustryUseCase,
-    private readonly findBusinessesByContactPersonUseCase: FindBusinessesByContactPersonUseCase,
-  ) {}
+	constructor(
+		private readonly createBusinessUseCase: CreateBusinessUseCase,
+		private readonly getBusinessUseCase: GetBusinessUseCase,
+		private readonly getBusinessesUseCase: GetBusinessesUseCase,
+		private readonly updateBusinessUseCase: UpdateBusinessUseCase,
+		private readonly deleteBusinessUseCase: DeleteBusinessUseCase,
+		private readonly findBusinessByTaxIdUseCase: FindBusinessByTaxIdUseCase,
+		private readonly findBusinessByIndustryUseCase: FindBusinessByIndustryUseCase,
+		private readonly findBusinessByContactPersonUseCase: FindBusinessByContactPersonUseCase,
+		private readonly findBusinessByNameUseCase: FindBusinessByNameUseCase,
+		private readonly findBusinessByTypeUseCase: FindBusinessByTypeUseCase,
+		private readonly setBusinessActiveStatusUseCase: SetBusinessActiveStatusUseCase,
+	) {}
 
-  @Post()
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear una nueva empresa' })
-  @ApiResponse({ 
-    status: HttpStatus.CREATED, 
-    description: 'Empresa creada exitosamente',
-    type: BusinessResponseDto 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'Datos de entrada inválidos' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.CONFLICT, 
-    description: 'El nombre o identificador fiscal ya existe' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async create(@Body() createBusinessDto: CreateBusinessDto): Promise<BusinessResponseDto> {
-    return await this.createBusinessUseCase.execute(createBusinessDto);
-  }
+	@Get()
+	@ApiOperation({summary: 'Listar empresas paginadas'})
+	@ApiResponse({status: 200, description: 'Lista de empresas obtenida con éxito'})
+	@ApiQuery({name: 'page', required: false, type: Number, description: 'Número de página'})
+	@ApiQuery({name: 'limit', required: false, type: Number, description: 'Elementos por página'})
+	@ApiQuery({name: 'search', required: false, type: String, description: 'Búsqueda por nombre'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findAll(
+		@Query('page') page: number = 1,
+		@Query('limit') limit: number = 10,
+		@Query('search') search?: string,
+		@Query('filter') filterStr?: string,
+	): Promise<PaginatedResponseDto<BusinessResponseDto>> {
+		// Inicializamos el filtro
+		let filter: Record<string, any> = {};
 
-  @Get()
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener empresas paginadas' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String, description: 'Búsqueda por nombre' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Lista de empresas obtenida exitosamente',
-    type: PaginatedResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
-    @Query('search') search?: string,
-  ): Promise<PaginatedResponseDto<BusinessResponseDto>> {
-    return await this.getBusinessesUseCase.execute(page, limit, search);
-  }
+		// Parsear el filtro avanzado si se proporciona
+		if (filterStr) {
+			try {
+				filter = JSON.parse(filterStr);
+				// Validación adicional
+				if (typeof filter !== 'object' || filter === null) {
+					filter = {};
+				}
+			} catch (error) {
+				// Si hay un error al parsear, se usa un filtro vacío
+				console.error('Error al parsear el filtro:', error);
+			}
+		}
 
-  @Get('tax-id/:taxId')
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Buscar empresa por identificador fiscal' })
-  @ApiParam({ name: 'taxId', description: 'Identificador fiscal' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Empresa encontrada',
-    type: BusinessResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Empresa no encontrada' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findByTaxId(@Param('taxId') taxId: string): Promise<BusinessResponseDto> {
-    return await this.findBusinessByTaxIdUseCase.execute(taxId);
-  }
+		// Si hay un término de búsqueda general, creamos una consulta con $or para buscar en múltiples campos
+		if (search && search.trim()) {
+			const searchTerm = search.trim();
+			const searchRegex = {$regex: searchTerm, $options: 'i'};
 
-  @Get('industry/:industry')
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Buscar empresas por industria' })
-  @ApiParam({ name: 'industry', description: 'Industria o sector' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Lista de empresas obtenida exitosamente',
-    type: [BusinessResponseDto]
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findByIndustry(@Param('industry') industry: string): Promise<BusinessResponseDto[]> {
-    return await this.findBusinessesByIndustryUseCase.execute(industry);
-  }
+			// Lista de campos de texto donde buscar
+			const textFields = [
+				'name',
+				'legalName',
+				'taxId',
+				'type',
+				'industry',
+				'website',
+				'email',
+				'phone',
+				'secondaryPhone',
+				'address.street',
+				'address.city',
+				'address.state',
+				'address.country',
+				'address.postalCode',
+				'billingAddress.street',
+				'billingAddress.city',
+				'billingAddress.state',
+				'billingAddress.country',
+				'billingAddress.postalCode',
+			];
 
-  @Get('contact-person/:personId')
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Buscar empresas por persona de contacto' })
-  @ApiParam({ name: 'personId', description: 'ID de la persona' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Lista de empresas obtenida exitosamente',
-    type: [BusinessResponseDto]
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findByContactPerson(@Param('personId') personId: string): Promise<BusinessResponseDto[]> {
-    return await this.findBusinessesByContactPersonUseCase.execute(personId);
-  }
+			// Creamos una condición $or para buscar en todos los campos de texto
+			const searchConditions = textFields.map((field) => ({[field]: searchRegex}));
 
-  @Get(':id')
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener una empresa por ID' })
-  @ApiParam({ name: 'id', description: 'ID de la empresa' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Empresa obtenida exitosamente',
-    type: BusinessResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Empresa no encontrada' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findOne(@Param('id') id: string): Promise<BusinessResponseDto> {
-    return await this.getBusinessUseCase.execute(id);
-  }
+			// Si ya existe un filtro, lo combinamos con la búsqueda usando $and
+			if (Object.keys(filter).length > 0) {
+				filter = {$and: [filter, {$or: searchConditions}]};
+			} else {
+				filter = {$or: searchConditions};
+			}
+		}
 
-  @Put(':id')
-  @Roles('admin', 'user')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar una empresa' })
-  @ApiParam({ name: 'id', description: 'ID de la empresa' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Empresa actualizada exitosamente',
-    type: BusinessResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'Datos de entrada inválidos' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Empresa no encontrada' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.CONFLICT, 
-    description: 'El nombre o identificador fiscal ya existe' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async update(
-    @Param('id') id: string,
-    @Body() updateBusinessDto: UpdateBusinessDto,
-  ): Promise<BusinessResponseDto> {
-    return await this.updateBusinessUseCase.execute(id, updateBusinessDto);
-  }
+		return this.getBusinessesUseCase.execute(filter, page, limit);
+	}
 
-  @Delete(':id')
-  @Roles('admin')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar una empresa' })
-  @ApiParam({ name: 'id', description: 'ID de la empresa' })
-  @ApiResponse({ 
-    status: HttpStatus.NO_CONTENT, 
-    description: 'Empresa eliminada exitosamente' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Empresa no encontrada' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deleteBusinessUseCase.execute(id);
-  }
+	@Get('by-name/:name')
+	@ApiOperation({summary: 'Buscar empresas por nombre'})
+	@ApiResponse({status: 200, description: 'Empresas encontradas con éxito'})
+	@ApiParam({name: 'name', description: 'Nombre completo o parcial de la empresa'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findByName(@Param('name') name: string): Promise<BusinessResponseDto[]> {
+		return this.findBusinessByNameUseCase.execute(name);
+	}
+
+	@Get('by-tax-id/:taxId')
+	@ApiOperation({summary: 'Buscar empresa por identificador fiscal'})
+	@ApiResponse({status: 200, description: 'Empresa encontrada con éxito'})
+	@ApiResponse({status: 404, description: 'Empresa no encontrada'})
+	@ApiParam({name: 'taxId', description: 'Identificador fiscal'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findByTaxId(@Param('taxId') taxId: string): Promise<BusinessResponseDto> {
+		return this.findBusinessByTaxIdUseCase.execute(taxId);
+	}
+
+	@Get('by-industry/:industry')
+	@ApiOperation({summary: 'Buscar empresas por industria'})
+	@ApiResponse({status: 200, description: 'Empresas encontradas con éxito'})
+	@ApiParam({name: 'industry', description: 'Industria o sector'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findByIndustry(@Param('industry') industry: string): Promise<BusinessResponseDto[]> {
+		return this.findBusinessByIndustryUseCase.execute(industry);
+	}
+
+	@Get('by-type/:type')
+	@ApiOperation({summary: 'Buscar empresas por tipo'})
+	@ApiResponse({status: 200, description: 'Empresas encontradas con éxito'})
+	@ApiParam({name: 'type', description: 'Tipo de empresa'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findByType(@Param('type') type: string): Promise<BusinessResponseDto[]> {
+		return this.findBusinessByTypeUseCase.execute(type);
+	}
+
+	@Get('by-contact-person/:personId')
+	@ApiOperation({summary: 'Buscar empresas por persona de contacto'})
+	@ApiResponse({status: 200, description: 'Empresas encontradas con éxito'})
+	@ApiParam({name: 'personId', description: 'ID de la persona de contacto'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findByContactPerson(@Param('personId') personId: string): Promise<BusinessResponseDto[]> {
+		return this.findBusinessByContactPersonUseCase.execute(personId);
+	}
+
+	@Get(':id')
+	@ApiOperation({summary: 'Obtener una empresa por ID'})
+	@ApiResponse({status: 200, description: 'Empresa obtenida con éxito'})
+	@ApiResponse({status: 404, description: 'Empresa no encontrada'})
+	@ApiParam({name: 'id', description: 'ID de la empresa'})
+	@Roles('admin', 'business-manager', 'user')
+	@Permissions('businesses:read')
+	async findOne(@Param('id') id: string): Promise<BusinessResponseDto> {
+		return this.getBusinessUseCase.execute(id);
+	}
+
+	@Post()
+	@ApiOperation({summary: 'Crear una nueva empresa'})
+	@ApiResponse({status: 201, description: 'Empresa creada con éxito'})
+	@ApiResponse({status: 400, description: 'Datos inválidos'})
+	@HttpCode(HttpStatus.CREATED)
+	@Roles('admin', 'business-manager')
+	@Permissions('businesses:create')
+	async create(@Body() createBusinessDto: CreateBusinessDto): Promise<BusinessResponseDto> {
+		return this.createBusinessUseCase.execute(createBusinessDto);
+	}
+
+	@Put(':id')
+	@ApiOperation({summary: 'Actualizar una empresa'})
+	@ApiResponse({status: 200, description: 'Empresa actualizada con éxito'})
+	@ApiResponse({status: 404, description: 'Empresa no encontrada'})
+	@ApiParam({name: 'id', description: 'ID de la empresa'})
+	@Roles('admin', 'business-manager')
+	@Permissions('businesses:update')
+	async update(@Param('id') id: string, @Body() updateBusinessDto: UpdateBusinessDto): Promise<BusinessResponseDto> {
+		return this.updateBusinessUseCase.execute(id, updateBusinessDto);
+	}
+
+	@Patch(':id/active-status')
+	@ApiOperation({summary: 'Cambiar el estado de activación de una empresa'})
+	@ApiResponse({status: 200, description: 'Estado de activación cambiado con éxito'})
+	@ApiResponse({status: 404, description: 'Empresa no encontrada'})
+	@ApiParam({name: 'id', description: 'ID de la empresa'})
+	@Roles('admin', 'business-manager')
+	@Permissions('businesses:update')
+	async setActiveStatus(@Param('id') id: string, @Body() body: {isActive: boolean}): Promise<BusinessResponseDto> {
+		return this.setBusinessActiveStatusUseCase.execute(id, body.isActive);
+	}
+
+	@Delete(':id')
+	@ApiOperation({summary: 'Eliminar una empresa'})
+	@ApiResponse({status: 200, description: 'Empresa eliminada con éxito'})
+	@ApiResponse({status: 404, description: 'Empresa no encontrada'})
+	@ApiParam({name: 'id', description: 'ID de la empresa'})
+	@Roles('admin')
+	@Permissions('businesses:delete')
+	async remove(@Param('id') id: string): Promise<void> {
+		return this.deleteBusinessUseCase.execute(id);
+	}
 }

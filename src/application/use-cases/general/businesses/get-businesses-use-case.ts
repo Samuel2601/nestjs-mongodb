@@ -13,17 +13,25 @@ export class GetBusinessesUseCase {
 
 	/**
 	 * Ejecuta el caso de uso para obtener un listado paginado de empresas
-	 * @param pagination Parámetros de paginación y filtrado
+	 * @param filter Filtro de búsqueda
+	 * @param page Número de página
+	 * @param limit Límite de elementos por página
 	 * @returns Listado paginado de empresas
 	 */
-	async execute(pagination: PaginatedResponseDto<BusinessResponseDto>): Promise<PaginatedResponseDto<BusinessResponseDto>> {
+	async execute(filter: any = {}, page: number = 1, limit: number = 10): Promise<PaginatedResponseDto<BusinessResponseDto>> {
 		// Obtener la lista de empresas y el total de registros
-		const result = await this.businessRepository.findPaginated(pagination.data, pagination.page, pagination.limit);
+		const result = await this.businessRepository.findPaginated(filter, page, limit);
 
-		// Convertir la entidad a DTO de respuesta
+		// Convertir las entidades a DTOs de respuesta
+		const businessesDto = this.businessMapper.toResponseDtos(result.data);
+
+		// Construir la respuesta paginada
 		return {
-			...result,
-			data: this.businessMapper.toResponseDtos(result.data),
+			data: businessesDto,
+			total: result.total,
+			page: result.page,
+			limit: result.limit,
+			totalPages: result.totalPages,
 		};
 	}
 }

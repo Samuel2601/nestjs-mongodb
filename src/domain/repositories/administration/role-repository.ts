@@ -33,7 +33,7 @@ export abstract class RoleRepository {
 	 * @param permissionIds IDs de permisos
 	 * @returns Rol actualizado
 	 */
-	abstract updatePermissions(roleId: string | Types.ObjectId, permissionIds: (string | Types.ObjectId)[]): Promise<Role | null>;
+	abstract updatePermissions(roleId: string | Types.ObjectId, permissionIds: (string | Types.ObjectId)[], session?: any): Promise<Role | null>;
 
 	/**
 	 * Encuentra todos los roles de sistema

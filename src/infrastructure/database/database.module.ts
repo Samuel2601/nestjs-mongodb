@@ -25,7 +25,7 @@ import {RoleSchema} from './mongodb/schemas/administration/role-schema';
 import {PermissionSchema} from './mongodb/schemas/administration/permission-schema';
 import {PersonSchema} from './mongodb/schemas/general/person-schema';
 import {BusinessSchema} from './mongodb/schemas/general/business-schema';
-import {DatabaseService} from './database-service';
+import {DatabaseService} from './database.service';
 
 @Module({
 	imports: [

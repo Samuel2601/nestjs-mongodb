@@ -57,10 +57,10 @@ export class RoleRepositoryImpl extends BaseRepository<RoleDocument> implements 
 		return this.mapToEntities(roles);
 	}
 
-	async updatePermissions(roleId: string | Types.ObjectId, permissionIds: (string | Types.ObjectId)[]): Promise<Role | null> {
+	async updatePermissions(roleId: string | Types.ObjectId, permissionIds: (string | Types.ObjectId)[], session?: any): Promise<Role | null> {
 		const objectIdPermissionIds = permissionIds.map((id) => (typeof id === 'string' ? new Types.ObjectId(id) : id));
 
-		const role = await this.update(roleId, {permissionIds: objectIdPermissionIds});
+		const role = await this.update(roleId, {permissionIds: objectIdPermissionIds}, session);
 		return this.mapToEntity(role);
 	}
 

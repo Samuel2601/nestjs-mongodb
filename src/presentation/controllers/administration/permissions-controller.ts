@@ -1,218 +1,160 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Put, 
-  Delete, 
-  Body, 
-  Param, 
-  Query, 
-  UseGuards, 
-  HttpStatus,
-  HttpCode,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+// Importaciones de NestJS Core
+import {Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Query, Patch, HttpCode, HttpStatus} from '@nestjs/common';
 
-import { JwtAuthGuard } from '../../guards/auth/jwt-auth.guard';
-import { RolesGuard } from '../../guards/roles.guard';
-import { Roles } from '../../decorators/roles.decorator';
+// Importaciones de Swagger
+import {ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam} from '@nestjs/swagger';
 
-import { CreatePermissionDto } from '../../../application/dtos/administration/permission/create-permission.dto';
-import { UpdatePermissionDto } from '../../../application/dtos/administration/permission/update-permission.dto';
-import { PermissionResponseDto } from '../../../application/dtos/administration/permission/permission-response.dto';
-import { PaginatedResponseDto } from '../../../application/dtos/paginated-response.dto';
+// Guards
+import {JwtAuthGuard} from 'src/presentation/guards/auth/jwt-auth.guard';
+import {RolesGuard} from 'src/presentation/guards/roles.guard';
+import {PermissionsGuard} from 'src/presentation/guards/permissions.guard';
 
-import { CreatePermissionUseCase } from '../../../application/use-cases/administration/permissions/create-permission.use-case';
-import { GetPermissionUseCase } from '../../../application/use-cases/administration/permissions/get-permission.use-case';
-import { GetPermissionsUseCase } from '../../../application/use-cases/administration/permissions/get-permissions.use-case';
-import { UpdatePermissionUseCase } from '../../../application/use-cases/administration/permissions/update-permission.use-case';
-import { DeletePermissionUseCase } from '../../../application/use-cases/administration/permissions/delete-permission.use-case';
-import { GetPermissionsByGroupUseCase } from '../../../application/use-cases/administration/permissions/get-permissions-by-group.use-case';
-import { GetPermissionGroupsUseCase } from '../../../application/use-cases/administration/permissions/get-permission-groups.use-case';
+// Decoradores
+import {Roles} from 'src/presentation/decorators/roles-decorator';
+import {Permissions} from 'src/presentation/decorators/permissions-decorator';
+import {Public} from 'src/presentation/decorators/public.decorator';
+
+// DTOs
+import {CreatePermissionDto} from 'src/application/dtos/administration/permission/create-permission-dto';
+import {UpdatePermissionDto} from 'src/application/dtos/administration/permission/update-permission-dto';
+import {PermissionResponseDto} from 'src/application/dtos/administration/permission/permission-response-dto';
+import {PaginatedResponseDto} from 'src/application/dtos/paginated-response-dto';
+
+// Use Cases de Permisos
+import {CreatePermissionUseCase} from 'src/application/use-cases/administration/permissions/create-permission-use-case';
+import {GetPermissionUseCase} from 'src/application/use-cases/administration/permissions/get-permission-use-case';
+import {DeletePermissionUseCase} from 'src/application/use-cases/administration/permissions/delete-permission-use-case';
+import {UpdatePermissionUseCase} from 'src/application/use-cases/administration/permissions/update-permission-use-case';
+import {ListPermissionsUseCase} from 'src/application/use-cases/administration/permissions/list-permissions-use-case';
+import {GetSystemPermissionsUseCase} from 'src/application/use-cases/administration/permissions/get-system-permissions-use-case';
 
 @ApiTags('Permissions')
-@Controller('permissions')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
+@Controller('permissions')
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class PermissionsController {
-  constructor(
-    private readonly createPermissionUseCase: CreatePermissionUseCase,
-    private readonly getPermissionUseCase: GetPermissionUseCase,
-    private readonly getPermissionsUseCase: GetPermissionsUseCase,
-    private readonly updatePermissionUseCase: UpdatePermissionUseCase,
-    private readonly deletePermissionUseCase: DeletePermissionUseCase,
-    private readonly getPermissionsByGroupUseCase: GetPermissionsByGroupUseCase,
-    private readonly getPermissionGroupsUseCase: GetPermissionGroupsUseCase,
-  ) {}
+	constructor(
+		private readonly createPermissionUseCase: CreatePermissionUseCase,
+		private readonly getPermissionUseCase: GetPermissionUseCase,
+		private readonly updatePermissionUseCase: UpdatePermissionUseCase,
+		private readonly deletePermissionUseCase: DeletePermissionUseCase,
+		private readonly listPermissionsUseCase: ListPermissionsUseCase,
+		private readonly getSystemPermissionsUseCase: GetSystemPermissionsUseCase,
+	) {}
 
-  @Post()
-  @Roles('admin')
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Crear un nuevo permiso' })
-  @ApiResponse({ 
-    status: HttpStatus.CREATED, 
-    description: 'Permiso creado exitosamente',
-    type: PermissionResponseDto 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'Datos de entrada inválidos' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.CONFLICT, 
-    description: 'La clave del permiso ya existe' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async create(@Body() createPermissionDto: CreatePermissionDto): Promise<PermissionResponseDto> {
-    return await this.createPermissionUseCase.execute(createPermissionDto);
-  }
+	@Get()
+	@ApiOperation({summary: 'Listar permisos paginados'})
+	@ApiResponse({status: 200, description: 'Lista de permisos obtenida con éxito'})
+	@ApiQuery({name: 'page', required: false, type: Number, description: 'Número de página'})
+	@ApiQuery({name: 'limit', required: false, type: Number, description: 'Elementos por página'})
+	@ApiQuery({name: 'group', required: false, type: String, description: 'Filtrar por grupo'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async findAll(
+		@Query('page') page: number = 1,
+		@Query('limit') limit: number = 10,
+		@Query('group') group?: string,
+		@Query() filter?: Record<string, any>,
+	): Promise<PaginatedResponseDto<PermissionResponseDto>> {
+		// Si se proporciona un grupo, filtramos por ese grupo
+		if (group) {
+			const permissions = await this.listPermissionsUseCase.executeByGroup(group);
+			// Simulamos una respuesta paginada con todos los permisos del grupo
+			return {
+				data: permissions,
+				total: permissions.length,
+				page: 1,
+				limit: permissions.length,
+				totalPages: 1,
+			};
+		}
 
-  @Get()
-  @Roles('admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener permisos paginados' })
-  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
-  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'group', required: false, type: String })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Lista de permisos obtenida exitosamente',
-    type: PaginatedResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
-    @Query('search') search?: string,
-    @Query('group') group?: string,
-  ): Promise<PaginatedResponseDto<PermissionResponseDto>> {
-    if (group) {
-      return await this.getPermissionsByGroupUseCase.execute(group, page, limit);
-    }
-    return await this.getPermissionsUseCase.execute(page, limit, search);
-  }
+		// Extraemos page y limit para no enviarlos como parte del filtro
+		const {page: _, limit: __, group: ___, ...filterParams} = filter || {};
+		return this.listPermissionsUseCase.execute(filterParams, page, limit);
+	}
 
-  @Get('groups')
-  @Roles('admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener todos los grupos de permisos' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Lista de grupos obtenida exitosamente',
-    type: [String]
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findAllGroups(): Promise<string[]> {
-    return await this.getPermissionGroupsUseCase.execute();
-  }
+	@Get('all')
+	@ApiOperation({summary: 'Obtener todos los permisos sin paginación'})
+	@ApiResponse({status: 200, description: 'Lista completa de permisos obtenida con éxito'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async findAllPermissions(@Query() filter?: Record<string, any>): Promise<PermissionResponseDto[]> {
+		return this.listPermissionsUseCase.executeAll(filter);
+	}
 
-  @Get(':id')
-  @Roles('admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Obtener un permiso por ID' })
-  @ApiParam({ name: 'id', description: 'ID del permiso' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Permiso obtenido exitosamente',
-    type: PermissionResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Permiso no encontrado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async findOne(@Param('id') id: string): Promise<PermissionResponseDto> {
-    return await this.getPermissionUseCase.execute(id);
-  }
+	@Get('system')
+	@ApiOperation({summary: 'Obtener todos los permisos de sistema'})
+	@ApiResponse({status: 200, description: 'Lista de permisos de sistema obtenida con éxito'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async getSystemPermissions(): Promise<PermissionResponseDto[]> {
+		return this.getSystemPermissionsUseCase.execute();
+	}
 
-  @Put(':id')
-  @Roles('admin')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Actualizar un permiso' })
-  @ApiParam({ name: 'id', description: 'ID del permiso' })
-  @ApiResponse({ 
-    status: HttpStatus.OK, 
-    description: 'Permiso actualizado exitosamente',
-    type: PermissionResponseDto
-  })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'Datos de entrada inválidos' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Permiso no encontrado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async update(
-    @Param('id') id: string,
-    @Body() updatePermissionDto: UpdatePermissionDto,
-  ): Promise<PermissionResponseDto> {
-    return await this.updatePermissionUseCase.execute(id, updatePermissionDto);
-  }
+	@Get('groups')
+	@ApiOperation({summary: 'Obtener todos los grupos de permisos'})
+	@ApiResponse({status: 200, description: 'Lista de grupos de permisos obtenida con éxito'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async getGroups(): Promise<string[]> {
+		return this.listPermissionsUseCase.executeGetAllGroups();
+	}
 
-  @Delete(':id')
-  @Roles('admin')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Eliminar un permiso' })
-  @ApiParam({ name: 'id', description: 'ID del permiso' })
-  @ApiResponse({ 
-    status: HttpStatus.NO_CONTENT, 
-    description: 'Permiso eliminado exitosamente' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.NOT_FOUND, 
-    description: 'Permiso no encontrado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.BAD_REQUEST, 
-    description: 'No se puede eliminar un permiso de sistema' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.UNAUTHORIZED, 
-    description: 'No autorizado' 
-  })
-  @ApiResponse({ 
-    status: HttpStatus.FORBIDDEN, 
-    description: 'Acceso prohibido' 
-  })
-  async remove(@Param('id') id: string): Promise<void> {
-    await this.deletePermissionUseCase.execute(id);
-  }
+	@Get('by-key/:key')
+	@ApiOperation({summary: 'Obtener permiso por clave'})
+	@ApiResponse({status: 200, description: 'Permiso obtenido con éxito'})
+	@ApiResponse({status: 404, description: 'Permiso no encontrado'})
+	@ApiParam({name: 'key', description: 'Clave del permiso', example: 'users:create'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async findByKey(@Param('key') key: string): Promise<PermissionResponseDto> {
+		return this.getPermissionUseCase.executeByKey(key);
+	}
+
+	@Get(':id')
+	@ApiOperation({summary: 'Obtener un permiso por ID'})
+	@ApiResponse({status: 200, description: 'Permiso obtenido con éxito'})
+	@ApiResponse({status: 404, description: 'Permiso no encontrado'})
+	@ApiParam({name: 'id', description: 'ID del permiso'})
+	@Roles('admin')
+	@Permissions('permissions:read')
+	async findOne(@Param('id') id: string): Promise<PermissionResponseDto> {
+		return this.getPermissionUseCase.execute(id);
+	}
+
+	@Post()
+	@ApiOperation({summary: 'Crear un nuevo permiso'})
+	@ApiResponse({status: 201, description: 'Permiso creado con éxito'})
+	@ApiResponse({status: 400, description: 'Datos inválidos'})
+	@HttpCode(HttpStatus.CREATED)
+	@Roles('admin')
+	@Permissions('permissions:create')
+	async create(@Body() createPermissionDto: CreatePermissionDto): Promise<PermissionResponseDto> {
+		return this.createPermissionUseCase.execute(createPermissionDto);
+	}
+
+	@Put(':id')
+	@ApiOperation({summary: 'Actualizar un permiso'})
+	@ApiResponse({status: 200, description: 'Permiso actualizado con éxito'})
+	@ApiResponse({status: 404, description: 'Permiso no encontrado'})
+	@ApiResponse({status: 400, description: 'No se puede modificar un permiso de sistema'})
+	@ApiParam({name: 'id', description: 'ID del permiso'})
+	@Roles('admin')
+	@Permissions('permissions:update')
+	async update(@Param('id') id: string, @Body() updatePermissionDto: UpdatePermissionDto): Promise<PermissionResponseDto> {
+		return this.updatePermissionUseCase.execute(id, updatePermissionDto);
+	}
+
+	@Delete(':id')
+	@ApiOperation({summary: 'Eliminar un permiso'})
+	@ApiResponse({status: 200, description: 'Permiso eliminado con éxito'})
+	@ApiResponse({status: 404, description: 'Permiso no encontrado'})
+	@ApiResponse({status: 400, description: 'No se puede eliminar un permiso de sistema o que está asignado a roles'})
+	@ApiParam({name: 'id', description: 'ID del permiso'})
+	@Roles('admin')
+	@Permissions('permissions:delete')
+	async remove(@Param('id') id: string): Promise<boolean> {
+		return this.deletePermissionUseCase.execute(id);
+	}
 }
